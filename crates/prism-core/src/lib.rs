@@ -6,6 +6,7 @@ pub mod crc;
 pub mod error;
 pub mod pixel;
 pub mod raster;
+pub mod reconstruct;
 
 pub use container::{decode_file, encode_file, Header, Image, PayloadKind};
 pub use error::Error;

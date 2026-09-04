@@ -27,9 +27,11 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         ["info", input] => info(input),
         ["bench", dir] => bench(dir),
         ["gen-corpus", dir] => gen_corpus(dir),
+        ["scale", input, output, factor] => scale_cmd(input, output, factor.parse()?),
+        ["compare", input, output, factor] => compare_cmd(input, output, factor.parse()?),
         _ => {
             eprintln!(
-                "usage:\n  prism encode <in.png> <out.prism>\n  prism decode <in.prism> <out.png>\n  prism info <file.prism>\n  prism bench <png-dir>\n  prism gen-corpus <dir>"
+                "usage:\n  prism encode <in.png> <out.prism>\n  prism decode <in.prism> <out.png>\n  prism info <file.prism>\n  prism bench <png-dir>\n  prism gen-corpus <dir>\n  prism scale <in.prism|in.png> <out.png> <factor>\n  prism compare <in.png> <out.png> <factor>"
             );
             Err("invalid arguments".into())
         }
@@ -102,6 +104,59 @@ fn info(input: &str) -> Result<(), Box<dyn std::error::Error>> {
             c.payload.len()
         );
     }
+    Ok(())
+}
+
+fn load_any(input: &str) -> Result<Image, Box<dyn std::error::Error>> {
+    if input.ends_with(".prism") {
+        Ok(decode_file(&fs::read(input)?)?)
+    } else {
+        load_png(input)
+    }
+}
+
+fn scale_cmd(input: &str, output: &str, factor: u32) -> Result<(), Box<dyn std::error::Error>> {
+    let img = load_any(input)?;
+    let scaled = prism_core::reconstruct::scale(&img, img.width * factor, img.height * factor)?;
+    save_png(&scaled, output)?;
+    println!(
+        "{input} -> {output}: {}x{} -> {}x{}",
+        img.width, img.height, scaled.width, scaled.height
+    );
+    Ok(())
+}
+
+fn nearest(img: &Image, w_out: u32, h_out: u32) -> Image {
+    let mut pixels = Vec::with_capacity((w_out * h_out) as usize);
+    for y in 0..h_out {
+        for x in 0..w_out {
+            let sx = (x * img.width / w_out).min(img.width - 1) as usize;
+            let sy = (y * img.height / h_out).min(img.height - 1) as usize;
+            pixels.push(img.pixels[sy * img.width as usize + sx]);
+        }
+    }
+    Image { width: w_out, height: h_out, pixels }
+}
+
+/// Side-by-side: nearest-neighbor left, mandated reconstruction right.
+fn compare_cmd(input: &str, output: &str, factor: u32) -> Result<(), Box<dyn std::error::Error>> {
+    let img = load_any(input)?;
+    let (w, h) = (img.width * factor, img.height * factor);
+    let left = nearest(&img, w, h);
+    let right = prism_core::reconstruct::scale(&img, w, h)?;
+
+    let gap = 4u32;
+    let total_w = w * 2 + gap;
+    let mut pixels = vec![Rgba::new(255, 255, 255, 255); (total_w * h) as usize];
+    for y in 0..h as usize {
+        let row = y * total_w as usize;
+        pixels[row..row + w as usize]
+            .copy_from_slice(&left.pixels[y * w as usize..(y + 1) * w as usize]);
+        pixels[row + (w + gap) as usize..row + total_w as usize]
+            .copy_from_slice(&right.pixels[y * w as usize..(y + 1) * w as usize]);
+    }
+    save_png(&Image { width: total_w, height: h, pixels }, output)?;
+    println!("{output}: nearest (left) vs Catmull-Rom reconstruction (right) at {factor}x");
     Ok(())
 }
 
@@ -211,7 +266,7 @@ fn gen_corpus(dir: &str) -> Result<(), Box<dyn std::error::Error>> {
     fs::create_dir_all(dir)?;
     let size = 512u32;
 
-    let save = |name: &str, f: &dyn Fn(u32, u32) -> Rgba| -> Result<(), Box<dyn std::error::Error>> {
+    let save = |name: &str, size: u32, f: &dyn Fn(u32, u32) -> Rgba| -> Result<(), Box<dyn std::error::Error>> {
         let mut pixels = Vec::with_capacity((size * size) as usize);
         for y in 0..size {
             for x in 0..size {
@@ -222,18 +277,18 @@ fn gen_corpus(dir: &str) -> Result<(), Box<dyn std::error::Error>> {
         save_png(&img, &format!("{dir}/{name}.png"))
     };
 
-    save("gradient", &|x, y| {
+    save("gradient", size, &|x, y| {
         Rgba::new((x / 2) as u8, (y / 2) as u8, ((x + y) / 4) as u8, 255)
     })?;
 
-    save("plasma", &|x, y| {
+    save("plasma", size, &|x, y| {
         let (fx, fy) = (x as f32 / 64.0, y as f32 / 64.0);
         let v = (fx.sin() + fy.cos() + (fx + fy).sin() + (fx * fy).cos()) / 4.0;
         let c = ((v * 0.5 + 0.5) * 255.0) as u8;
         Rgba::new(c, 255 - c, c / 2 + 60, 255)
     })?;
 
-    save("shapes", &|x, y| {
+    save("shapes", size, &|x, y| {
         let (cx, cy) = (x as i32 - 256, y as i32 - 256);
         let d = cx * cx + cy * cy;
         if d < 100 * 100 {
@@ -242,6 +297,18 @@ fn gen_corpus(dir: &str) -> Result<(), Box<dyn std::error::Error>> {
             Rgba::new(60, 60, 220, 255)
         } else {
             Rgba::new(240, 240, 235, 255)
+        }
+    })?;
+
+    save("demo-small", 48, &|x, y| {
+        let (cx, cy) = (x as i32 - 24, y as i32 - 24);
+        let d = cx * cx + cy * cy;
+        if d < 12 * 12 {
+            Rgba::new(210, 70, 50, 255)
+        } else if (x as i32 - y as i32).abs() < 2 {
+            Rgba::new(30, 30, 30, 255)
+        } else {
+            Rgba::new((80 + x * 3) as u8, (90 + y * 3) as u8, 170, 255)
         }
     })?;
 
