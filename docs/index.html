@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PRISM image format</title>
+<meta name="description" content="PRISM: one container, a lossless raster codec with format-defined scaling, and a compact binary vector payload. A spec-driven Rust project.">
+<link rel="icon" href="assets/logo-96.png">
+<style>
+  :root {
+    --bg: #0d1017;
+    --panel: #151a24;
+    --edge: #232b3a;
+    --text: #d9dee8;
+    --muted: #8b94a7;
+    --red: #e05252;
+    --green: #3fbf6f;
+    --blue: #5b7fe8;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 17px/1.65 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .spectrum {
+    height: 4px;
+    background: linear-gradient(90deg, var(--red), #e0a83a, var(--green), var(--blue));
+  }
+  main { max-width: 920px; margin: 0 auto; padding: 0 24px 96px; }
+  header { padding: 72px 0 48px; text-align: center; }
+  header img { width: 128px; height: 128px; image-rendering: auto; }
+  h1 {
+    font-size: 56px;
+    letter-spacing: 0.18em;
+    margin: 16px 0 8px;
+    font-weight: 700;
+  }
+  .tagline { color: var(--muted); font-size: 20px; }
+  .lede { max-width: 720px; margin: 28px auto 0; text-align: left; }
+  h2 {
+    font-size: 26px;
+    margin: 72px 0 16px;
+    padding-top: 24px;
+    border-top: 1px solid var(--edge);
+  }
+  p + p { margin-top: 14px; }
+  a { color: var(--blue); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  figure {
+    margin: 28px 0;
+    background: var(--panel);
+    border: 1px solid var(--edge);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  figure img { width: 100%; height: auto; display: block; border-radius: 6px; }
+  figcaption { color: var(--muted); font-size: 15px; margin-top: 12px; }
+  .stat-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    margin: 28px 0;
+  }
+  .stat {
+    background: var(--panel);
+    border: 1px solid var(--edge);
+    border-radius: 10px;
+    padding: 18px;
+  }
+  .stat b { font-size: 30px; display: block; }
+  .stat span { color: var(--muted); font-size: 15px; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 24px 0;
+    font-size: 15px;
+    font-variant-numeric: tabular-nums;
+  }
+  th, td { text-align: right; padding: 8px 12px; border-bottom: 1px solid var(--edge); }
+  th:first-child, td:first-child { text-align: left; }
+  th { color: var(--muted); font-weight: 600; }
+  td.win { color: var(--green); font-weight: 600; }
+  ul.plain { margin: 14px 0 0 20px; }
+  ul.plain li { margin: 6px 0; }
+  code {
+    background: var(--panel);
+    border: 1px solid var(--edge);
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-size: 15px;
+  }
+  footer {
+    border-top: 1px solid var(--edge);
+    color: var(--muted);
+    font-size: 15px;
+    padding: 32px 24px;
+    text-align: center;
+  }
+  @media (max-width: 600px) { h1 { font-size: 40px; } }
+</style>
+</head>
+<body>
+<div class="spectrum"></div>
+<main>
+  <header>
+    <img src="assets/logo-96.png" alt="The PRISM logo: a triangular prism refracting a beam into red, green, and blue" width="128" height="128">
+    <h1>PRISM</h1>
+    <p class="tagline">One image in, multiple representations out.</p>
+    <div class="lede">
+      <p>PRISM is an image format built from a written spec outward: one container holding either a lossless raster payload with format-defined scaling, or a compact binary vector payload, with an optional authenticated encryption wrapper. The reference implementation is a dependency-free Rust library, and every byte of the format is documented in <a href="https://github.com/bknie1/PRISM/tree/main/docs">normative specs</a> short enough to read in a sitting.</p>
+    </div>
+  </header>
+
+  <h2>Every viewer scales it the same way</h2>
+  <p>No raster format today defines its own scaling math, so the same PNG looks different in every application that resizes it. PRISM mandates the reconstruction kernel (Catmull-Rom, specified in pure integer fixed-point arithmetic), which makes scaled rendering bit-identical across platforms by construction. Scaling to native size returns the stored pixels exactly, so the lossless guarantee and the scaling guarantee are the same math.</p>
+  <figure>
+    <img src="assets/reconstruction-8x.png" alt="Side by side comparison at 8x magnification: nearest-neighbor on the left shows blocky banding, PRISM reconstruction on the right renders a smooth gradient">
+    <figcaption>The same 913-byte PRISM file at 8x. Left: nearest-neighbor, what naive scaling gives you. Right: the mandated reconstruction, identical in every conforming viewer.</figcaption>
+  </figure>
+
+  <h2>True vectors in the same container</h2>
+  <p>Geometric content does not need pixels at all. The vector payload stores pooled styles and paths with delta-encoded fixed-point coordinates, in the tradition of Haiku's HVIF and TinyVG. This entire logo, gradients and anti-aliasing included, is a 214-byte file rendering here at 768 pixels; it renders just as crisply at any other size.</p>
+  <figure>
+    <img src="assets/logo-8x.png" alt="The PRISM logo rendered at 768 pixels: smooth anti-aliased triangle and refracted beams">
+    <figcaption>corpus/logo.prism, 214 bytes, rasterized at 8x its design size by the integer-only reference rasterizer.</figcaption>
+  </figure>
+
+  <h2>Compression that earns its bytes</h2>
+  <p>The raster codec is QOI's byte-aligned op vocabulary re-based on JPEG-LS median edge prediction, so a run means "the predictor kept being right," which follows smooth gradients instead of only flat regions. Tiles make decode partial and parallel. On the synthetic corpus:</p>
+  <table>
+    <thead><tr><th>image</th><th>raw</th><th>PRISM</th><th>QOI</th><th>PNG</th></tr></thead>
+    <tbody>
+      <tr><td>gradient</td><td>1,048,576</td><td class="win">131,923</td><td>263,698</td><td>148,692</td></tr>
+      <tr><td>plasma</td><td>1,048,576</td><td class="win">241,085</td><td>281,766</td><td>298,299</td></tr>
+      <tr><td>shapes</td><td>1,048,576</td><td class="win">6,840</td><td>7,161</td><td>10,584</td></tr>
+      <tr><td>noise</td><td>1,048,576</td><td>1,048,148</td><td>1,048,081</td><td>1,049,236</td></tr>
+      <tr><td>totals</td><td>4,194,304</td><td class="win">34.0%</td><td>38.2%</td><td>35.9%</td></tr>
+    </tbody>
+  </table>
+  <p>The gradient row is the design thesis in one number: prediction-runs land at half QOI's size. Noise compresses for nobody, as the pigeonhole principle requires; honest formats stay at 100% there rather than pretending otherwise.</p>
+
+  <div class="stat-row">
+    <div class="stat"><b>34.0%</b><span>of raw RGBA on the corpus, vs QOI 38.2% and PNG 35.9%</span></div>
+    <div class="stat"><b>214 B</b><span>vector logo, crisp at every size</span></div>
+    <div class="stat"><b>0</b><span>dependencies in prism-core by default</span></div>
+    <div class="stat"><b>29</b><span>tests: round-trips, hostile inputs, tamper detection</span></div>
+  </div>
+
+  <h2>The rest of the container</h2>
+  <ul class="plain">
+    <li>CRC32 on every chunk; unknown chunk types skip cleanly, which is the forward-compatibility mechanism.</li>
+    <li>Optional ChaCha20-Poly1305 wrapper that authenticates the header alongside the payload: a wrong key or a tampered bit fails outright. Standard cryptography only, feature-gated so the core library keeps its empty dependency list.</li>
+    <li>Little-endian, byte-aligned, 8-bit sRGB RGBA in version 1, with header room reserved for more.</li>
+    <li>A <code>prism</code> CLI: encode, decode, info, scale, compare, bench, encrypt, decrypt.</li>
+  </ul>
+
+  <h2>Spec-driven, and a teaching project</h2>
+  <p>Every phase wrote its normative spec before its code: <a href="https://github.com/bknie1/PRISM/blob/main/docs/container.md">container</a>, <a href="https://github.com/bknie1/PRISM/blob/main/docs/raster-payload.md">raster payload</a>, <a href="https://github.com/bknie1/PRISM/blob/main/docs/reconstruction-spec.md">reconstruction</a>, <a href="https://github.com/bknie1/PRISM/blob/main/docs/vector-payload.md">vector payload</a>. The implementation doubles as a Rust course: six <a href="https://github.com/bknie1/PRISM/tree/main/docs/teaching">lessons</a> tie each phase to the language features it exercises, from wrapping arithmetic and slices to fixed-point determinism and cargo features.</p>
+  <p><a href="https://github.com/bknie1/PRISM">Source, specs, and research notes on GitHub.</a></p>
+</main>
+<footer>PRISM is a personal research project by Brandon Knieriem. MIT licensed.</footer>
+<div class="spectrum"></div>
+</body>
+</html>
