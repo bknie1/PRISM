@@ -1,0 +1,15 @@
+[package]
+name = "prism-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "PRISM command line tool: encode, decode, inspect, benchmark"
+
+[[bin]]
+name = "prism"
+path = "src/main.rs"
+
+[dependencies]
+prism-core = { path = "../prism-core" }
+image = { version = "0.25", default-features = false, features = ["png"] }
+qoi = "0.4"
