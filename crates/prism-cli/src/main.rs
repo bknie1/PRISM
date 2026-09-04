@@ -214,12 +214,15 @@ fn gen_vector(output: &str) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+/// Center-aligned nearest neighbor, matching the reconstruction's mapping.
 fn nearest(img: &Image, w_out: u32, h_out: u32) -> Image {
     let mut pixels = Vec::with_capacity((w_out * h_out) as usize);
     for y in 0..h_out {
         for x in 0..w_out {
-            let sx = (x * img.width / w_out).min(img.width - 1) as usize;
-            let sy = (y * img.height / h_out).min(img.height - 1) as usize;
+            let sx = (((2 * x as u64 + 1) * img.width as u64) / (2 * w_out as u64))
+                .min(img.width as u64 - 1) as usize;
+            let sy = (((2 * y as u64 + 1) * img.height as u64) / (2 * h_out as u64))
+                .min(img.height as u64 - 1) as usize;
             pixels.push(img.pixels[sy * img.width as usize + sx]);
         }
     }
@@ -413,6 +416,18 @@ fn gen_corpus(dir: &str) -> Result<(), Box<dyn std::error::Error>> {
         } else {
             Rgba::new(240, 240, 235, 255)
         }
+    })?;
+
+    save("demo-plasma", 48, &|x, y| {
+        let (fx, fy) = (x as f32, y as f32);
+        let v = ((fx / 3.2).sin() + (fy / 2.7).cos() + ((fx + fy) / 4.5).sin()) / 3.0;
+        let c = (v * 0.5 + 0.5) * 255.0;
+        Rgba::new(
+            (40.0 + c * 0.8) as u8,
+            (230.0 - c * 0.55) as u8,
+            (120.0 + c * 0.5) as u8,
+            255,
+        )
     })?;
 
     save("demo-small", 48, &|x, y| {

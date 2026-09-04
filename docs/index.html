@@ -56,6 +56,14 @@
   }
   figure img { width: 100%; height: auto; display: block; border-radius: 6px; }
   figcaption { color: var(--muted); font-size: 15px; margin-top: 12px; }
+  .duel {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .duel figure { margin: 12px 0; text-align: center; }
+  .duel img { width: 100%; max-width: 340px; margin: 0 auto; }
+  @media (max-width: 600px) { .duel { grid-template-columns: 1fr; } }
   .stat-row {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -115,8 +123,12 @@
   <h2>Every viewer scales it the same way</h2>
   <p>No raster format today defines its own scaling math, so the same PNG looks different in every application that resizes it. PRISM mandates the reconstruction kernel (Catmull-Rom, specified in pure integer fixed-point arithmetic), which makes scaled rendering bit-identical across platforms by construction. Scaling to native size returns the stored pixels exactly, so the lossless guarantee and the scaling guarantee are the same math.</p>
   <figure>
-    <img src="assets/reconstruction-8x.png" alt="Side by side comparison at 8x magnification: nearest-neighbor on the left shows blocky banding, PRISM reconstruction on the right renders a smooth gradient">
-    <figcaption>The same 913-byte PRISM file at 8x. Left: nearest-neighbor, what naive scaling gives you. Right: the mandated reconstruction, identical in every conforming viewer.</figcaption>
+    <img src="assets/reconstruction-plasma-8x.png" alt="Side by side comparison of smooth color fields at 8x magnification: nearest-neighbor on the left shows visible square blocks, PRISM reconstruction on the right is perfectly smooth">
+    <figcaption>Smooth content is where reconstruction earns its keep: a 4,469-byte PRISM file at 8x. Left: nearest-neighbor, visibly built from squares. Right: the mandated reconstruction, and every conforming viewer produces these exact bytes.</figcaption>
+  </figure>
+  <figure>
+    <img src="assets/reconstruction-8x.png" alt="Side by side comparison of a graphic with hard edges at 8x: both sides show stepped edges, the right side renders the background gradient smoothly">
+    <figcaption>Honesty at the edges: on hard-edged graphics (913-byte file, 8x), reconstruction smooths the gradient but cannot invent edge detail that was never sampled; the steps stay steps. Content like this belongs in the vector payload below, where edges are math instead of samples.</figcaption>
   </figure>
 
   <h2>True vectors in the same container</h2>
@@ -146,6 +158,34 @@
     <div class="stat"><b>0</b><span>dependencies in prism-core by default</span></div>
     <div class="stat"><b>29</b><span>tests: round-trips, hostile inputs, tamper detection</span></div>
   </div>
+
+  <h2>From PNG to .prism, bit for bit</h2>
+  <p>Conversion is one command, and fidelity is not a claim, it is a test: <code>prism encode</code> then <code>prism decode</code> returns the exact source pixels, and the benchmark harness fails the run on any single-byte mismatch. Converting real PNG files, not raw pixels:</p>
+  <table>
+    <thead><tr><th>source</th><th>PNG on disk</th><th>.prism</th><th>of PNG size</th><th>decode</th></tr></thead>
+    <tbody>
+      <tr><td>shapes, 512 x 512</td><td>10,584</td><td class="win">6,840</td><td>64.6%</td><td>bit-exact</td></tr>
+      <tr><td>plasma, 512 x 512</td><td>298,299</td><td class="win">241,085</td><td>80.8%</td><td>bit-exact</td></tr>
+      <tr><td>gradient, 512 x 512</td><td>148,692</td><td class="win">131,923</td><td>88.7%</td><td>bit-exact</td></tr>
+      <tr><td>logo render, 768 x 768</td><td>80,910</td><td class="win">72,792</td><td>90.0%</td><td>bit-exact</td></tr>
+      <tr><td>demo graphic, 48 x 48</td><td>2,727</td><td class="win">913</td><td>33.5%</td><td>bit-exact</td></tr>
+    </tbody>
+  </table>
+  <p>The last two rows tell the deeper story. That 768px logo render costs 72,792 bytes as pixels, faithfully kept; the same image as a PRISM vector payload costs 214 bytes and scales forever. Choosing the right representation beats any codec, and PRISM is one container that holds both.</p>
+
+  <h2>Against SVG</h2>
+  <p>The fair fight for the vector payload is SVG, so here it is. The same logo, authored twice: once as hand-minified SVG, once as PRISM vector records. Both render below; the SVG is drawn by your browser, the PRISM version by our integer-only rasterizer.</p>
+  <div class="duel">
+    <figure>
+      <img src="assets/logo.svg" alt="The prism logo rendered by the browser from SVG" width="300" height="300">
+      <figcaption>SVG: 542 bytes minified, 316 gzipped.</figcaption>
+    </figure>
+    <figure>
+      <img src="assets/logo-8x.png" alt="The prism logo rendered by the PRISM reference rasterizer" width="300" height="300">
+      <figcaption>PRISM vector: 214 bytes, no compression step needed.</figcaption>
+    </figure>
+  </div>
+  <p>PRISM lands at 39% of the raw SVG and 68% of the gzipped SVG, before anyone optimizes the encoder, because binary opcodes, delta coordinates, and varints do structurally what gzip recovers only statistically. The honest other side: SVG opens everywhere and PRISM opens in PRISM; ubiquity is the one feature no format design can encode. On bytes, the vector payload is exactly where it should be: ahead of the incumbent.</p>
 
   <h2>The rest of the container</h2>
   <ul class="plain">

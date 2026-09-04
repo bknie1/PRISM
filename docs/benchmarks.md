@@ -11,6 +11,12 @@ Reproduce with `prism gen-corpus corpus` then `prism bench corpus`. Release buil
     shapes         1048576    6840       7161       10584   | 3.5ms   3.5ms   0.4ms   0.8ms
     totals         4194304    1427996 (34.0%)  1600706 (38.2%)  1506811 (35.9%)
 
+## 2026-09-04, PNG conversion and SVG comparison
+
+Converting PNG files on disk (image-crate encoder output), decode verified bit-exact: shapes 10,584 to 6,840 (64.6% of the PNG); plasma 298,299 to 241,085 (80.8%); gradient 148,692 to 131,923 (88.7%); the 768px logo render 80,910 to 72,792 (90.0%); the 48px demo graphic 2,727 to 913 (33.5%).
+
+Vector payload vs SVG, same logo authored both ways: hand-minified SVG 542 bytes (316 gzipped) against 214 bytes of PRISM vector records; PRISM is 39% of raw SVG and 68% of gzipped. The 768px raster render of that logo costs 72,792 bytes as a PRISM raster payload, which is the representation argument in one number pair.
+
 ## Reading
 
 The MED-prediction bet pays off exactly where docs/research/qoi.md predicted: the gradient lands at half QOI's size because a run in PRISM means "the predictor kept being right," which follows smooth ramps QOI has to spell out delta by delta. Plasma (the photo-like case) and shapes also beat both QOI and PNG. Noise is incompressible for every format, per the pigeonhole constraint in SPEC.md; the honest behavior is staying at ~100% of raw rather than growing, and all four formats manage it.
