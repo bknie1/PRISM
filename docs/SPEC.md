@@ -40,11 +40,12 @@ Optional AEAD (ChaCha20-Poly1305 or equivalent) over the payload chunks. No home
 
 ## Phasing
 
-Phase 0: research (QOI, post-QOI critiques, JPEG XL modular mode overview, TinyVG, HVIF, interpolation theory) and this spec.
-Phase 1: container + raster encoder/decoder in Rust, round-trip tests over a corpus, benchmarks against PNG and QOI.
-Phase 2: reconstruction renderer (scale-anywhere viewer).
-Phase 3: vector payload.
-Phase 4: encryption wrapper.
+Phase 0 (done): research (docs/research/) and this spec.
+Phase 1 (done): container + raster encoder/decoder (docs/container.md, docs/raster-payload.md), round-trip tests, benchmarks against PNG and QOI (docs/benchmarks.md).
+Phase 2 (done): reconstruction renderer (docs/reconstruction-spec.md).
+Phase 3 (done): vector payload (docs/vector-payload.md).
+Phase 4 (done): encryption wrapper (ENCR in docs/container.md), feature-gated so prism-core stays dependency-free by default.
+Next candidates: real-photo corpus for honest benchmarks, encoder/decoder speed work, minification spec, fuzzing the decoders, a wasm viewer.
 
 ## Non-goals
 

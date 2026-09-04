@@ -30,9 +30,11 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         ["scale", input, output, factor] => scale_cmd(input, output, factor.parse()?),
         ["compare", input, output, factor] => compare_cmd(input, output, factor.parse()?),
         ["gen-vector", output] => gen_vector(output),
+        ["encrypt", input, output, key] => crypt(input, output, key, true),
+        ["decrypt", input, output, key] => crypt(input, output, key, false),
         _ => {
             eprintln!(
-                "usage:\n  prism encode <in.png> <out.prism>\n  prism decode <in.prism> <out.png>\n  prism info <file.prism>\n  prism bench <png-dir>\n  prism gen-corpus <dir>\n  prism scale <in.prism|in.png> <out.png> <factor>\n  prism compare <in.png> <out.png> <factor>"
+                "usage:\n  prism encode <in.png> <out.prism>\n  prism decode <in.prism> <out.png>\n  prism info <file.prism>\n  prism bench <png-dir>\n  prism gen-corpus <dir>\n  prism gen-vector <out.prism>\n  prism scale <in.prism|in.png> <out.png> <factor>\n  prism compare <in.png> <out.png> <factor>\n  prism encrypt <in.prism> <out.prism> <64-hex-char-key>\n  prism decrypt <in.prism> <out.prism> <64-hex-char-key>"
             );
             Err("invalid arguments".into())
         }
@@ -243,6 +245,33 @@ fn compare_cmd(input: &str, output: &str, factor: u32) -> Result<(), Box<dyn std
     }
     save_png(&Image { width: total_w, height: h, pixels }, output)?;
     println!("{output}: nearest (left) vs Catmull-Rom reconstruction (right) at {factor}x");
+    Ok(())
+}
+
+fn parse_key(hex: &str) -> Result<[u8; 32], Box<dyn std::error::Error>> {
+    if hex.len() != 64 || !hex.chars().all(|c| c.is_ascii_hexdigit()) {
+        return Err("key must be 64 hex characters (32 bytes)".into());
+    }
+    let mut key = [0u8; 32];
+    for (i, byte) in key.iter_mut().enumerate() {
+        *byte = u8::from_str_radix(&hex[i * 2..i * 2 + 2], 16)?;
+    }
+    Ok(key)
+}
+
+fn crypt(input: &str, output: &str, key_hex: &str, encrypting: bool) -> Result<(), Box<dyn std::error::Error>> {
+    let key = parse_key(key_hex)?;
+    let data = fs::read(input)?;
+    let out = if encrypting {
+        prism_core::crypto::encrypt_file(&data, &key)?
+    } else {
+        prism_core::crypto::decrypt_file(&data, &key)?
+    };
+    fs::write(output, &out)?;
+    println!(
+        "{input} -> {output}: {}",
+        if encrypting { "encrypted" } else { "decrypted" }
+    );
     Ok(())
 }
 

@@ -6,8 +6,8 @@ use crate::pixel::Rgba;
 use crate::raster;
 use crate::vector::{self, VectorImage};
 
-const MAGIC: [u8; 4] = *b"PRSM";
-const VERSION: u8 = 1;
+pub(crate) const MAGIC: [u8; 4] = *b"PRSM";
+pub(crate) const VERSION: u8 = 1;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum PayloadKind {
@@ -59,7 +59,7 @@ pub fn encode_file(image: &Image) -> Vec<u8> {
     out
 }
 
-fn write_chunk(out: &mut Vec<u8>, ty: &[u8; 4], payload: &[u8]) {
+pub(crate) fn write_chunk(out: &mut Vec<u8>, ty: &[u8; 4], payload: &[u8]) {
     out.extend_from_slice(ty);
     out.extend_from_slice(&(payload.len() as u32).to_le_bytes());
     out.extend_from_slice(payload);
@@ -91,6 +91,9 @@ pub fn encode_vector_file(art: &VectorImage, width: u32, height: u32) -> Vec<u8>
 /// Decode a PRISM file to its payload without rasterizing.
 pub fn decode_payload(data: &[u8]) -> Result<FilePayload, Error> {
     let (header, chunks) = read_chunks(data)?;
+    if chunks.iter().any(|c| c.ty == *b"ENCR") {
+        return Err(Error::Encrypted);
+    }
     let find = |ty: &[u8; 4], name: &'static str| {
         chunks
             .iter()

@@ -34,7 +34,13 @@ RAST or VECT, required, exactly one, matching payload_kind: the payload as defin
 
 META, optional: reserved; contents defined later.
 
-ENCR, optional (Phase 4): wraps the payload chunk in AEAD; when present, RAST/VECT is inside it rather than at top level. Details specced in Phase 4.
+ENCR, optional: when present, the file carries no top-level RAST/VECT; the payload chunk lives encrypted inside ENCR. Layout:
+
+    algorithm   u8        0 = ChaCha20-Poly1305
+    nonce       12 bytes  unique per encryption, generated from the OS RNG
+    ciphertext  rest      AEAD output
+
+The plaintext is the complete serialized payload chunk (type, length, payload, CRC). The associated data is the HEAD chunk payload, which binds the ciphertext to the image's declared dimensions and parameters; tampering with either the ciphertext or the header fails authentication. Keys are 32 bytes and their management is out of scope for the format; the format never stores key material or a key hint. There is deliberately no homebrew here: algorithm 0 is the whole cryptographic surface, and future algorithms arrive as new ids, never as parameter twiddles.
 
 END, required, last: length 0, no payload.
 

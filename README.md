@@ -2,7 +2,7 @@
 
 A universal image format: one container, a lossless raster payload with a format-defined reconstruction function for scaling, and a compact binary vector payload for geometric content. A low-level Rust project, spec-driven; the spec is written and agreed before any encoder code exists.
 
-Current state: Phase 3 complete. The vector payload is implemented (pooled colors/styles/paths, zigzag varint deltas, gradients, reference rasterizer with 4x4 supersampling); this 214-byte `.prism` file renders crisp at any size:
+Current state: all four implementation phases complete (container + raster codec, reconstruction, vector payload, encryption wrapper). The vector payload is implemented (pooled colors/styles/paths, zigzag varint deltas, gradients, reference rasterizer with 4x4 supersampling); this 214-byte `.prism` file renders crisp at any size:
 
 ![vector logo at 8x](docs/assets/logo-8x.png)
 

@@ -10,6 +10,6 @@ name = "prism"
 path = "src/main.rs"
 
 [dependencies]
-prism-core = { path = "../prism-core" }
+prism-core = { path = "../prism-core", features = ["encryption"] }
 image = { version = "0.25", default-features = false, features = ["png"] }
 qoi = "0.4"

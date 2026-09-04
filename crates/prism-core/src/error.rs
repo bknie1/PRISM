@@ -12,6 +12,8 @@ pub enum Error {
     BadHeader(&'static str),
     BadOpStream(&'static str),
     BadVector(&'static str),
+    Encrypted,
+    CryptoFailed,
 }
 
 impl fmt::Display for Error {
@@ -27,6 +29,8 @@ impl fmt::Display for Error {
             Error::BadHeader(msg) => write!(f, "invalid header: {msg}"),
             Error::BadOpStream(msg) => write!(f, "invalid raster op stream: {msg}"),
             Error::BadVector(msg) => write!(f, "invalid vector payload: {msg}"),
+            Error::Encrypted => write!(f, "file is encrypted; decrypt it with the key first"),
+            Error::CryptoFailed => write!(f, "decryption failed: wrong key or tampered data"),
         }
     }
 }

@@ -8,6 +8,8 @@ pub mod pixel;
 pub mod raster;
 pub mod reconstruct;
 pub mod vector;
+#[cfg(feature = "encryption")]
+pub mod crypto;
 
 pub use container::{
     decode_file, decode_payload, encode_file, encode_vector_file, FilePayload, Header, Image,
