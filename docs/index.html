@@ -139,18 +139,19 @@
   </figure>
 
   <h2>Compression that earns its bytes</h2>
-  <p>The raster codec is QOI's byte-aligned op vocabulary re-based on JPEG-LS median edge prediction, so a run means "the predictor kept being right," which follows smooth gradients instead of only flat regions. Tiles make decode partial and parallel. On the synthetic corpus:</p>
+  <p>The raster codec is QOI's byte-aligned op vocabulary re-based on JPEG-LS median edge prediction, so a run means "the predictor kept being right," which follows smooth gradients instead of only flat regions. Tiles make decode partial and parallel. On the synthetic corpus, against the raster incumbents and, for honesty, SVG:</p>
   <table>
-    <thead><tr><th>image</th><th>raw</th><th>PRISM</th><th>QOI</th><th>PNG</th></tr></thead>
+    <thead><tr><th>image</th><th>raw</th><th>PRISM</th><th>QOI</th><th>PNG</th><th>SVG</th></tr></thead>
     <tbody>
-      <tr><td>gradient</td><td>1,048,576</td><td class="win">131,923</td><td>263,698</td><td>148,692</td></tr>
-      <tr><td>plasma</td><td>1,048,576</td><td class="win">241,085</td><td>281,766</td><td>298,299</td></tr>
-      <tr><td>shapes</td><td>1,048,576</td><td class="win">6,840</td><td>7,161</td><td>10,584</td></tr>
-      <tr><td>noise</td><td>1,048,576</td><td>1,048,148</td><td>1,048,081</td><td>1,049,236</td></tr>
-      <tr><td>totals</td><td>4,194,304</td><td class="win">34.0%</td><td>38.2%</td><td>35.9%</td></tr>
+      <tr><td>gradient</td><td>1,048,576</td><td class="win">131,923</td><td>263,698</td><td>148,692</td><td>631 a</td></tr>
+      <tr><td>plasma</td><td>1,048,576</td><td class="win">241,085</td><td>281,766</td><td>298,299</td><td>397,866 b</td></tr>
+      <tr><td>shapes</td><td>1,048,576</td><td>6,840</td><td>7,161</td><td>10,584</td><td class="win">219 a</td></tr>
+      <tr><td>noise</td><td>1,048,576</td><td>1,048,148</td><td>1,048,081</td><td>1,049,236</td><td>1,399,118 b</td></tr>
+      <tr><td>totals</td><td>4,194,304</td><td class="win">34.0%</td><td>38.2%</td><td>35.9%</td><td>42.9%</td></tr>
     </tbody>
   </table>
-  <p>The gradient row is the design thesis in one number: prediction-runs land at half QOI's size. Noise compresses for nobody, as the pigeonhole principle requires; honest formats stay at 100% there rather than pretending otherwise.</p>
+  <p><small>a: hand-authored geometry (<a href="assets/corpus-svg/shapes.svg">shapes.svg</a>, <a href="assets/corpus-svg/gradient.svg">gradient.svg</a>), visually equivalent but not pixel-exact; SVG's gradient interpolation and anti-aliasing differ at the pixel level, and PRISM, QOI, and PNG are all bit-exact. b: SVG cannot express sampled pixels, so the honest measurement is the source PNG embedded in the SVG as base64, a 33% markup.</small></p>
+  <p>The gradient row is the raster thesis in one number: prediction-runs land at half QOI's size. Noise compresses for nobody, as the pigeonhole principle requires; honest formats stay at 100% there rather than pretending otherwise. And the SVG column is the whole project's thesis in miniature: when an image truly is geometry, no raster codec comes within 30x of a scene description, and when it is samples, SVG has to smuggle a raster codec inside itself and pay base64 rent. The right response to that column is a container holding both representations, which is what PRISM is.</p>
 
   <div class="stat-row">
     <div class="stat"><b>34.0%</b><span>of raw RGBA on the corpus, vs QOI 38.2% and PNG 35.9%</span></div>

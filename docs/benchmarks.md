@@ -15,6 +15,8 @@ Reproduce with `prism gen-corpus corpus` then `prism bench corpus`. Release buil
 
 Converting PNG files on disk (image-crate encoder output), decode verified bit-exact: shapes 10,584 to 6,840 (64.6% of the PNG); plasma 298,299 to 241,085 (80.8%); gradient 148,692 to 131,923 (88.7%); the 768px logo render 80,910 to 72,792 (90.0%); the 48px demo graphic 2,727 to 913 (33.5%).
 
+SVG column for the corpus table (docs/assets/corpus-svg): gradient 631 and shapes 219 as hand-authored geometry (visually equivalent, not pixel-exact); plasma 397,866 and noise 1,399,118 as the source PNG embedded in SVG via base64 (the only way SVG carries sampled pixels; a 33% markup). SVG total 42.9% of raw vs PRISM 34.0%. Shapes is SVG's blowout win (30x smaller than any raster codec), which is the vector/raster fork stated as data.
+
 Vector payload vs SVG, same logo authored both ways: hand-minified SVG 542 bytes (316 gzipped) against 214 bytes of PRISM vector records; PRISM is 39% of raw SVG and 68% of gzipped. The 768px raster render of that logo costs 72,792 bytes as a PRISM raster payload, which is the representation argument in one number pair.
 
 ## Reading
