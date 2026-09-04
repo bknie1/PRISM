@@ -7,7 +7,11 @@ pub mod error;
 pub mod pixel;
 pub mod raster;
 pub mod reconstruct;
+pub mod vector;
 
-pub use container::{decode_file, encode_file, Header, Image, PayloadKind};
+pub use container::{
+    decode_file, decode_payload, encode_file, encode_vector_file, FilePayload, Header, Image,
+    PayloadKind,
+};
 pub use error::Error;
 pub use pixel::Rgba;

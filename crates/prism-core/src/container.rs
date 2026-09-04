@@ -4,6 +4,7 @@ use crate::crc::crc32_parts;
 use crate::error::Error;
 use crate::pixel::Rgba;
 use crate::raster;
+use crate::vector::{self, VectorImage};
 
 const MAGIC: [u8; 4] = *b"PRSM";
 const VERSION: u8 = 1;
@@ -65,24 +66,68 @@ fn write_chunk(out: &mut Vec<u8>, ty: &[u8; 4], payload: &[u8]) {
     out.extend_from_slice(&crc32_parts(&[ty, payload]).to_le_bytes());
 }
 
-/// Decode a PRISM file. Verifies every chunk CRC; skips unknown chunk types.
-pub fn decode_file(data: &[u8]) -> Result<Image, Error> {
+/// A decoded payload: raster pixels, or vector art plus its design size.
+pub enum FilePayload {
+    Raster(Image),
+    Vector { art: VectorImage, width: u32, height: u32 },
+}
+
+/// Encode vector art as a vector-payload PRISM file with the given design size.
+pub fn encode_vector_file(art: &VectorImage, width: u32, height: u32) -> Vec<u8> {
+    let mut head = Vec::with_capacity(14);
+    head.extend_from_slice(&width.to_le_bytes());
+    head.extend_from_slice(&height.to_le_bytes());
+    head.extend_from_slice(&[1, 8, 0, 0, 8, 0]);
+
+    let mut out = Vec::new();
+    out.extend_from_slice(&MAGIC);
+    out.push(VERSION);
+    write_chunk(&mut out, b"HEAD", &head);
+    write_chunk(&mut out, b"VECT", &vector::encode(art));
+    write_chunk(&mut out, b"END ", &[]);
+    out
+}
+
+/// Decode a PRISM file to its payload without rasterizing.
+pub fn decode_payload(data: &[u8]) -> Result<FilePayload, Error> {
     let (header, chunks) = read_chunks(data)?;
-
-    let payload = match header.payload_kind {
-        PayloadKind::Raster => chunks
+    let find = |ty: &[u8; 4], name: &'static str| {
+        chunks
             .iter()
-            .find(|c| c.ty == *b"RAST")
-            .ok_or(Error::MissingChunk("RAST"))?,
-        PayloadKind::Vector => return Err(Error::BadHeader("vector payloads not implemented yet")),
+            .find(|c| c.ty == *ty)
+            .ok_or(Error::MissingChunk(name))
     };
+    match header.payload_kind {
+        PayloadKind::Raster => {
+            let chunk = find(b"RAST", "RAST")?;
+            let pixels = raster::decode(chunk.payload, header.width, header.height)?;
+            Ok(FilePayload::Raster(Image {
+                width: header.width,
+                height: header.height,
+                pixels,
+            }))
+        }
+        PayloadKind::Vector => {
+            let chunk = find(b"VECT", "VECT")?;
+            Ok(FilePayload::Vector {
+                art: vector::decode(chunk.payload)?,
+                width: header.width,
+                height: header.height,
+            })
+        }
+    }
+}
 
-    let pixels = raster::decode(payload.payload, header.width, header.height)?;
-    Ok(Image {
-        width: header.width,
-        height: header.height,
-        pixels,
-    })
+/// Decode a PRISM file to pixels. Verifies every chunk CRC; skips unknown
+/// chunk types; vector payloads rasterize at their design size.
+pub fn decode_file(data: &[u8]) -> Result<Image, Error> {
+    match decode_payload(data)? {
+        FilePayload::Raster(img) => Ok(img),
+        FilePayload::Vector { art, width, height } => {
+            let pixels = vector::rasterize(&art, width, height, width, height)?;
+            Ok(Image { width, height, pixels })
+        }
+    }
 }
 
 /// Parse and validate the file, returning the header and all chunks after HEAD.

@@ -29,6 +29,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         ["gen-corpus", dir] => gen_corpus(dir),
         ["scale", input, output, factor] => scale_cmd(input, output, factor.parse()?),
         ["compare", input, output, factor] => compare_cmd(input, output, factor.parse()?),
+        ["gen-vector", output] => gen_vector(output),
         _ => {
             eprintln!(
                 "usage:\n  prism encode <in.png> <out.prism>\n  prism decode <in.prism> <out.png>\n  prism info <file.prism>\n  prism bench <png-dir>\n  prism gen-corpus <dir>\n  prism scale <in.prism|in.png> <out.png> <factor>\n  prism compare <in.png> <out.png> <factor>"
@@ -116,13 +117,98 @@ fn load_any(input: &str) -> Result<Image, Box<dyn std::error::Error>> {
 }
 
 fn scale_cmd(input: &str, output: &str, factor: u32) -> Result<(), Box<dyn std::error::Error>> {
-    let img = load_any(input)?;
-    let scaled = prism_core::reconstruct::scale(&img, img.width * factor, img.height * factor)?;
+    let scaled = if input.ends_with(".prism") {
+        match prism_core::decode_payload(&fs::read(input)?)? {
+            prism_core::FilePayload::Raster(img) => {
+                prism_core::reconstruct::scale(&img, img.width * factor, img.height * factor)?
+            }
+            prism_core::FilePayload::Vector { art, width, height } => {
+                let (w, h) = (width * factor, height * factor);
+                let pixels = prism_core::vector::rasterize(&art, width, height, w, h)?;
+                Image { width: w, height: h, pixels }
+            }
+        }
+    } else {
+        let img = load_png(input)?;
+        prism_core::reconstruct::scale(&img, img.width * factor, img.height * factor)?
+    };
     save_png(&scaled, output)?;
-    println!(
-        "{input} -> {output}: {}x{} -> {}x{}",
-        img.width, img.height, scaled.width, scaled.height
-    );
+    println!("{input} -> {output}: {}x{}", scaled.width, scaled.height);
+    Ok(())
+}
+
+/// Write a small demo logo as a vector-payload PRISM file.
+fn gen_vector(output: &str) -> Result<(), Box<dyn std::error::Error>> {
+    use prism_core::vector::{FillRule, PathCmd, Shape, Style, VectorImage};
+
+    let art = VectorImage {
+        scale: 4,
+        colors: vec![
+            Rgba::new(30, 30, 40, 255),
+            Rgba::new(235, 235, 245, 255),
+            Rgba::new(230, 60, 60, 220),
+            Rgba::new(60, 200, 90, 220),
+            Rgba::new(70, 110, 235, 220),
+            Rgba::new(255, 255, 255, 0),
+        ],
+        styles: vec![
+            Style::Flat { color: 0 },
+            Style::Linear { x0: 16 << 4, y0: 0, x1: 80 << 4, y1: 96 << 4, c0: 1, c1: 4 },
+            Style::Flat { color: 2 },
+            Style::Flat { color: 3 },
+            Style::Flat { color: 4 },
+        ],
+        paths: vec![
+            // Prism triangle.
+            vec![
+                PathCmd::MoveTo(48 << 4, 14 << 4),
+                PathCmd::LineTo(82 << 4, 74 << 4),
+                PathCmd::LineTo(14 << 4, 74 << 4),
+                PathCmd::Close,
+            ],
+            // Incoming beam.
+            vec![
+                PathCmd::MoveTo(0, 40 << 4),
+                PathCmd::LineTo(36 << 4, 46 << 4),
+                PathCmd::LineTo(36 << 4, 50 << 4),
+                PathCmd::LineTo(0, 44 << 4),
+                PathCmd::Close,
+            ],
+            // Three refracted beams.
+            vec![
+                PathCmd::MoveTo(60 << 4, 48 << 4),
+                PathCmd::LineTo(96 << 4, 24 << 4),
+                PathCmd::LineTo(96 << 4, 30 << 4),
+                PathCmd::LineTo(60 << 4, 52 << 4),
+                PathCmd::Close,
+            ],
+            vec![
+                PathCmd::MoveTo(60 << 4, 50 << 4),
+                PathCmd::LineTo(96 << 4, 46 << 4),
+                PathCmd::LineTo(96 << 4, 52 << 4),
+                PathCmd::LineTo(60 << 4, 54 << 4),
+                PathCmd::Close,
+            ],
+            vec![
+                PathCmd::MoveTo(60 << 4, 52 << 4),
+                PathCmd::LineTo(96 << 4, 68 << 4),
+                PathCmd::LineTo(96 << 4, 74 << 4),
+                PathCmd::LineTo(60 << 4, 56 << 4),
+                PathCmd::Close,
+            ],
+        ],
+        shapes: vec![
+            Shape { style: 1, path: 0, fill_rule: FillRule::NonZero },
+            Shape { style: 0, path: 1, fill_rule: FillRule::NonZero },
+            Shape { style: 2, path: 2, fill_rule: FillRule::NonZero },
+            Shape { style: 3, path: 3, fill_rule: FillRule::NonZero },
+            Shape { style: 4, path: 4, fill_rule: FillRule::NonZero },
+        ],
+    };
+
+    let data = prism_core::encode_vector_file(&art, 96, 96);
+    fs::write(output, &data)?;
+    println!("{output}: {} bytes, 96x96 design units", data.len());
     Ok(())
 }
 

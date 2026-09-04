@@ -11,6 +11,7 @@ pub enum Error {
     MissingChunk(&'static str),
     BadHeader(&'static str),
     BadOpStream(&'static str),
+    BadVector(&'static str),
 }
 
 impl fmt::Display for Error {
@@ -25,6 +26,7 @@ impl fmt::Display for Error {
             Error::MissingChunk(t) => write!(f, "required chunk {t} missing"),
             Error::BadHeader(msg) => write!(f, "invalid header: {msg}"),
             Error::BadOpStream(msg) => write!(f, "invalid raster op stream: {msg}"),
+            Error::BadVector(msg) => write!(f, "invalid vector payload: {msg}"),
         }
     }
 }
