@@ -2,6 +2,8 @@
 
 What `prism-core/src/reconstruct.rs` teaches.
 
+New to images or compression? Start with [the plain-English intro](00-eli5.md); terms like interpolation, kernel, and fixed point are defined in [the glossary](glossary.md).
+
 ## Why no floats
 
 The reconstruction spec promises bit-identical output on every platform. Floating point cannot promise that across implementations: results vary with evaluation order, FMA contraction, and compiler flags. So the scaler uses Q16 fixed point: an i64 where the low 16 bits are the fraction and 65536 means 1.0. Multiplying two Q16 values gives Q32, which is why the final accumulator shifts right by 32. Determinism stops being a testing problem and becomes arithmetic: integers either match or the code differs.

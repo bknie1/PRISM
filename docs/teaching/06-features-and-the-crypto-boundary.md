@@ -2,6 +2,8 @@
 
 What the ENCR wrapper (`prism-core/src/crypto.rs`) teaches.
 
+New to images or compression? Start with [the plain-English intro](00-eli5.md); terms like AEAD, nonce, and checksum are defined in [the glossary](glossary.md).
+
 ## Optional dependencies via features
 
 prism-core's headline property is the empty dependency list, and encryption would have broken it. Cargo features square the circle: `chacha20poly1305 = { version = "0.10", optional = true }` plus `encryption = ["dep:chacha20poly1305"]` in `[features]`, and `#[cfg(feature = "encryption")] pub mod crypto;` in lib.rs. Consumers who never asked for crypto compile a crate with zero dependencies; the CLI opts in with one line in its own manifest. Features are additive compile-time doors, and "pay only for what you use" is the same promise the language makes at runtime.

@@ -2,6 +2,8 @@
 
 What the vector payload (`prism-core/src/vector.rs`) teaches.
 
+New to images or compression? Start with [the plain-English intro](00-eli5.md); terms like vector graphics, opcode, varint, and rasterizer are defined in [the glossary](glossary.md).
+
 ## Enums are tagged unions done right
 
 `PathCmd` is the heart of it: `MoveTo(i64, i64)`, `QuadTo(i64, i64, i64, i64)`, `Close`. Each variant carries exactly its own operands, the size of the whole is the size of the largest variant plus a tag, and there is no way to read QuadTo fields out of a MoveTo; C's union-plus-enum-tag idiom with the safety made mandatory. `Style` works the same way, and `match *cmd { PathCmd::QuadTo(qx, qy, x, y) => ... }` destructures tag and payload in one pattern. The wire format's opcode byte and the in-memory enum tag are the same idea at two layers, and encode/decode are just the two directions of that correspondence.

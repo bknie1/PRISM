@@ -2,6 +2,8 @@
 
 How PRISM's failure handling works, from `prism-core/src/error.rs` outward.
 
+New to images or compression? Start with [the plain-English intro](00-eli5.md); terms like chunk, CRC, and op are defined in [the glossary](glossary.md).
+
 ## Errors are values in a plain enum
 
 `Error` in error.rs is an enum: `BadMagic`, `Truncated`, `CrcMismatch { chunk }`, and so on. Variants can carry data (the CRC failure names which chunk). There are no exceptions in Rust; a function that can fail returns `Result<T, Error>`, and the caller cannot touch the `T` without deciding what happens on the error case. Forgetting to handle a failure is a compile error, which for a file-format parser fed untrusted bytes is exactly the guarantee you want.

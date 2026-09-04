@@ -45,7 +45,11 @@ Phase 1 (done): container + raster encoder/decoder (docs/container.md, docs/rast
 Phase 2 (done): reconstruction renderer (docs/reconstruction-spec.md).
 Phase 3 (done): vector payload (docs/vector-payload.md).
 Phase 4 (done): encryption wrapper (ENCR in docs/container.md), feature-gated so prism-core stays dependency-free by default.
-Next candidates: real-photo corpus for honest benchmarks, encoder/decoder speed work, minification spec, fuzzing the decoders, a wasm viewer.
+Next candidates: real-photo corpus for honest benchmarks, an svg2prism converter and a TinyVG head-to-head over a real icon set (the vector payload's stated goal is beating both on bytes), encoder/decoder speed work, minification spec, fuzzing the decoders, a wasm viewer.
+
+## Extension policy: baseline and profiles
+
+Version 1 as specced here is the baseline profile, and it stays deliberately small; the raw math is the product. Richer capabilities (strokes with joins and caps, text, per-shape transforms, patterns, additional kernels and bit depths) may arrive later as an extended profile (working name .prismx, though profile identity lives in the header, never in the filename). The governing rule: every extended feature must ship with its lowering, a specified conversion back to baseline, so an extended file can always be flattened into a plain .prism that any version 1 decoder reads. Text lowers to paths, strokes lower to filled outline geometry, exotic kernels re-encode under the mandated one. A lowering may declare itself lossy (flattened text is no longer editable text), but it must always exist and must always render the same picture. The container's unknown-chunk skipping and version byte are the wire mechanics; this rule is the policy that keeps them honest. The baseline is the format; profiles are conveniences that are never allowed to hold it hostage.
 
 ## Non-goals
 

@@ -2,6 +2,8 @@
 
 What the repository layout is teaching, using PRISM's actual files.
 
+New to images or compression? Start with [the plain-English intro](00-eli5.md); every term of art is defined in [the glossary](glossary.md).
+
 ## Crates are the unit of compilation and publishing
 
 A crate is one library or one binary. PRISM has two: `prism-core` (the format: pure logic, zero dependencies) and `prism-cli` (the `prism` binary: file IO, PNG conversion, benchmarks). The split is deliberate and it is the same discipline as keeping a C library free of `main()`: anything that might one day be a wasm decoder or an editor plugin lives in core, and core is not allowed to know that files or terminals exist. Core's `Cargo.toml` has an empty `[dependencies]` section, which is the strongest simplicity claim a Rust project can make.
