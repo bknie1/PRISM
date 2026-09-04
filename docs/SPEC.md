@@ -1,8 +1,10 @@
-# PRISM image format, spec draft 0
+# PRISM image format, spec draft 1
 
-Status: Phase 0 skeleton, 2026-09-04. This document is the scope fence; the encoder is not started until this is agreed.
+Status: Phase 0, 2026-09-04. This document is the scope fence; the encoder is not started until this is agreed.
 
 Extension: `.prism`. The name is the design statement: one image goes in, multiple representations come out.
+
+The flagship feature is the reconstruction spec: PRISM is the raster format that defines its own scaling math, so a file renders identically at any size in every conforming viewer. Compression targets most use cases, never edge-case supremacy.
 
 ## Niche
 
@@ -18,15 +20,15 @@ These are physics, and the spec never promises around them.
 
 ## Container
 
-Magic bytes, format version, then a chunk table. Chunks: header (dimensions, color space, bit depth, payload type), one or more payload chunks (raster or vector), optional metadata, optional encryption envelope wrapping the payloads. Byte-aligned throughout. Endianness, alignment, and chunk checksums are open research items.
+Magic bytes, format version, then a chunk table. Chunks: header (dimensions, color space, bit depth, payload type), one payload chunk (raster or vector; mixed payloads are reserved for a later version), optional metadata, optional encryption envelope wrapping the payload. Byte-aligned throughout, all integers little-endian, CRC32 per chunk.
 
 ## Raster payload
 
-Bit-exact lossless. First implementation is a QOI-class byte-aligned op stream; candidate twists to evaluate during research: 2D prediction using the previous row (QOI's known weakness), a smarter pixel index, and tiled layout for partial decode. Bit-level entropy coding is deferred to a later phase and only if the ratio chase justifies the complexity.
+Bit-exact lossless, 8-bit RGBA in sRGB with straight (unpremultiplied) alpha in version 1; the header reserves depth and colorspace fields so 16-bit and HDR can arrive later without breaking files. The payload is a QOI-class byte-aligned op stream extended with a previous-row predictor (QOI's known weakness against PNG's filters) and a tiled layout for partial decode. Bit-level entropy coding is deferred to a later phase and only if the ratio chase justifies the complexity. See docs/research/qoi.md.
 
 ## Reconstruction spec
 
-The format mandates the upscaling function so every viewer renders identical output at any scale. Candidates to research: Catmull-Rom, exact-interpolating B-splines, Lanczos. Requirements: deterministic, passes exactly through the stored samples, cheap enough to evaluate live.
+The format mandates the upscaling function so every viewer renders identical output at any scale. Version 1 mandates Catmull-Rom: an interpolating spline that passes exactly through the stored samples, deterministic, and cheap enough to evaluate live. Alternative kernels (Lanczos and friends) may be added later as declared header options, never as viewer discretion.
 
 ## Vector payload
 
@@ -48,6 +50,10 @@ Phase 4: encryption wrapper.
 
 Animation, thumbnail/metadata ecosystems, beating JPEG XL on ratio in version 1, browser adoption.
 
+## Resolved decisions
+
+Little-endian throughout. Version 1 pixels are 8-bit RGBA, sRGB, straight alpha; header reserves room for more depths and colorspaces. Catmull-Rom is the mandated v1 reconstruction kernel. CRC32 per chunk. One payload type per file in v1. Encryption is standard AEAD only.
+
 ## Open questions
 
-Bit depths beyond 8 (16-bit, HDR). Color space handling (sRGB first?). Alpha semantics. Endianness. Whether mixed raster+vector in one file is allowed in version 1 or one payload type per file.
+Exact op set for the previous-row predictor (design against the QOI ops during Phase 1). Tile size. Metadata chunk contents.
