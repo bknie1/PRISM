@@ -174,6 +174,28 @@
   </table>
   <p>The last two rows tell the deeper story. That 768px logo render costs 72,792 bytes as pixels, faithfully kept; the same image as a PRISM vector payload costs 214 bytes and scales forever. Choosing the right representation beats any codec, and PRISM is one container that holds both.</p>
 
+  <h2>A real photograph</h2>
+  <p>Everything above used synthetic test patterns. Here is an actual camera photograph: <a href="https://commons.wikimedia.org/wiki/File:The_Earth_seen_from_Apollo_17.jpg">The Blue Marble</a>, shot by the Apollo 17 crew on December 7, 1972, NASA public domain. Real optical grain, real cloud texture, real JPEG-source noise, nothing hand-authored.</p>
+  <figure>
+    <img src="assets/photo-original.png" alt="The Blue Marble: a photograph of Earth from space showing Africa, Antarctica, and swirling cloud formations">
+    <figcaption>1280 &times; 1281, decoded from the source JPEG and re-encoded losslessly for a fair three-way comparison.</figcaption>
+  </figure>
+  <table>
+    <thead><tr><th>encoding</th><th>bytes</th><th>of raw RGBA</th></tr></thead>
+    <tbody>
+      <tr><td>raw RGBA</td><td>6,558,720</td><td>100%</td></tr>
+      <tr><td>PNG (lossless)</td><td>3,553,500</td><td>54.2%</td></tr>
+      <tr><td>QOI (lossless)</td><td>2,729,952</td><td>41.6%</td></tr>
+      <tr><td>.prism (lossless)</td><td class="win">2,533,776</td><td class="win">38.6%</td></tr>
+    </tbody>
+  </table>
+  <p>PRISM lands at 71.3% of PNG's size and 92.8% of QOI's, on a genuine photograph, not a synthetic where the codec's own assumptions get to pick the test. A pixel-level check across the decoded file confirms zero differences from the source: every one of the roughly 1.6 million pixels came back exactly, alpha channel included. Zoomed 3x into the cloud detail with no smoothing:</p>
+  <figure>
+    <img src="assets/photo-crop-3x.png" alt="A 3x nearest-neighbor zoom into a cloud formation, showing fine texture and grain preserved exactly">
+    <figcaption>A cropped detail at 3x, pixel-doubled with no smoothing so nothing hides a mismatch. This is what "lossless" is a promise about: not that it looks fine, that it is identical.</figcaption>
+  </figure>
+  <p><small>For scale: the original JPEG this photo shipped as is 431 KB, far smaller than any lossless encoding here. That is not a fair fight; JPEG is a lossy codec that deliberately discards data the eye will not miss, a different category of promise than PRISM's raster payload makes today. Closing that gap is lossy mode, and it is not in version 1.</small></p>
+
   <h2>Against SVG</h2>
   <p>The fair fight for the vector payload is SVG, so here it is. The same logo, authored twice: once as hand-minified SVG, once as PRISM vector records. Both render below; the SVG is drawn by your browser, the PRISM version by our integer-only rasterizer.</p>
   <div class="duel">

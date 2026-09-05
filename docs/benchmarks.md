@@ -19,6 +19,10 @@ SVG column for the corpus table (docs/assets/corpus-svg): gradient 631 and shape
 
 Vector payload vs SVG, same logo authored both ways: hand-minified SVG 542 bytes (316 gzipped) against 214 bytes of PRISM vector records; PRISM is 39% of raw SVG and 68% of gzipped. The 768px raster render of that logo costs 72,792 bytes as a PRISM raster payload, which is the representation argument in one number pair.
 
+## 2026-09-05, real photograph
+
+Source: The Blue Marble, Apollo 17, December 7 1972, NASA (public domain), 1280x1281 downsample of the original via Wikimedia Commons. Decoded from JPEG, then measured losslessly across formats: raw RGBA 6,558,720; PNG 3,553,500 (54.2%); QOI 2,729,952 (41.6%); .prism 2,533,776 (38.6%, 71.3% of PNG, 92.8% of QOI). A pixel-level spot check across the full decoded image found zero differences from the source pixels. The source JPEG itself is 431,044 bytes, smaller than any lossless encoding here; that comparison is not apples to apples, since JPEG is lossy and PRISM's raster payload is lossless-only in version 1.
+
 ## Reading
 
 The MED-prediction bet pays off exactly where docs/research/qoi.md predicted: the gradient lands at half QOI's size because a run in PRISM means "the predictor kept being right," which follows smooth ramps QOI has to spell out delta by delta. Plasma (the photo-like case) and shapes also beat both QOI and PNG. Noise is incompressible for every format, per the pigeonhole constraint in SPEC.md; the honest behavior is staying at ~100% of raw rather than growing, and all four formats manage it.
