@@ -1,0 +1,12 @@
+[package]
+name = "prism-wasm"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "WebAssembly boundary for prism-core: decode and render .prism files in a browser"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+prism-core = { path = "../prism-core" }

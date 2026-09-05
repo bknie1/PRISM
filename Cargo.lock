@@ -269,6 +269,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "prism-wasm"
+version = "0.1.0"
+dependencies = [
+ "prism-core",
+]
+
+[[package]]
 name = "pxfm"
 version = "0.1.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"

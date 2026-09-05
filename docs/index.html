@@ -54,8 +54,24 @@
     border-radius: 10px;
     padding: 16px;
   }
-  figure img { width: 100%; height: auto; display: block; border-radius: 6px; }
+  figure img, figure canvas { width: 100%; height: auto; display: block; border-radius: 6px; background: #000; }
   figcaption { color: var(--muted); font-size: 15px; margin-top: 12px; }
+  .live-tag {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--green);
+    border: 1px solid var(--green);
+    border-radius: 4px;
+    padding: 1px 6px;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+  .live-status { color: var(--muted); font-size: 14px; margin-top: 10px; min-height: 1.4em; }
+  .slider-row { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+  .slider-row input[type="range"] { flex: 1; accent-color: var(--blue); }
+  .slider-row output { color: var(--text); font-variant-numeric: tabular-nums; min-width: 9ch; text-align: right; }
   .duel {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -131,11 +147,17 @@
     <figcaption>Honesty at the edges: on hard-edged graphics (913-byte file, 8x), reconstruction smooths the gradient but cannot invent edge detail that was never sampled; the steps stay steps. Content like this belongs in the vector payload below, where edges are math instead of samples.</figcaption>
   </figure>
 
-  <h2>True vectors in the same container</h2>
-  <p>Geometric content does not need pixels at all. The vector payload stores pooled styles and paths with delta-encoded fixed-point coordinates, in the tradition of Haiku's HVIF and TinyVG. This entire logo, gradients and anti-aliasing included, is a 214-byte file rendering here at 768 pixels; it renders just as crisply at any other size.</p>
+  <h2>True vectors in the same container<span class="live-tag">LIVE</span></h2>
+  <p>Geometric content does not need pixels at all. The vector payload stores pooled styles and paths with delta-encoded fixed-point coordinates, in the tradition of Haiku's HVIF and TinyVG. The canvas below is not a picture of the logo: it is a 214-byte <code>.prism</code> file, fetched over the network and decoded by your browser right now, running <code>prism-core</code> compiled to WebAssembly. Drag the slider; every frame is a fresh rasterization from those same 214 bytes.</p>
   <figure>
-    <img src="assets/logo-8x.png" alt="The PRISM logo rendered at 768 pixels: smooth anti-aliased triangle and refracted beams">
-    <figcaption>corpus/logo.prism, 214 bytes, rasterized at 8x its design size by the integer-only reference rasterizer.</figcaption>
+    <canvas id="vector-canvas" width="480" height="480" role="img" aria-label="The PRISM logo, rasterized live in your browser from a 214-byte vector file"></canvas>
+    <div class="slider-row">
+      <input type="range" id="vector-slider" min="48" max="960" value="480" aria-label="Render size in pixels">
+      <output id="vector-size">480 &times; 480</output>
+    </div>
+    <div class="live-status" id="vector-status">Loading the WebAssembly decoder&hellip;</div>
+    <noscript><style>#vector-canvas, .slider-row, #vector-status { display: none; }</style><img src="assets/logo-8x.png" alt="The PRISM logo rendered at 768 pixels: smooth anti-aliased triangle and refracted beams"></noscript>
+    <figcaption>assets/logo.prism, 214 bytes on disk, rasterized at whatever size the slider asks for. No JavaScript drawing code and no image asset beyond the 214 bytes and the decoder itself.</figcaption>
   </figure>
 
   <h2>Compression that earns its bytes</h2>
@@ -174,11 +196,13 @@
   </table>
   <p>The last two rows tell the deeper story. That 768px logo render costs 72,792 bytes as pixels, faithfully kept; the same image as a PRISM vector payload costs 214 bytes and scales forever. Choosing the right representation beats any codec, and PRISM is one container that holds both.</p>
 
-  <h2>A real photograph</h2>
-  <p>Everything above used synthetic test patterns. Here is an actual camera photograph: <a href="https://commons.wikimedia.org/wiki/File:The_Earth_seen_from_Apollo_17.jpg">The Blue Marble</a>, shot by the Apollo 17 crew on December 7, 1972, NASA public domain. Real optical grain, real cloud texture, real JPEG-source noise, nothing hand-authored.</p>
+  <h2>A real photograph<span class="live-tag">LIVE</span></h2>
+  <p>Everything above used synthetic test patterns. Here is an actual camera photograph: <a href="https://commons.wikimedia.org/wiki/File:The_Earth_seen_from_Apollo_17.jpg">The Blue Marble</a>, shot by the Apollo 17 crew on December 7, 1972, NASA public domain. Real optical grain, real cloud texture, real JPEG-source noise, nothing hand-authored. The image below is fetched and decoded live, the same WebAssembly decoder as the logo above, just handed a raster payload instead of a vector one.</p>
   <figure>
-    <img src="assets/photo-original.png" alt="The Blue Marble: a photograph of Earth from space showing Africa, Antarctica, and swirling cloud formations">
-    <figcaption>1280 &times; 1281, decoded from the source JPEG and re-encoded losslessly for a fair three-way comparison.</figcaption>
+    <canvas id="photo-canvas" width="1280" height="1281" role="img" aria-label="The Blue Marble, decoded live in your browser from a PRISM raster file"></canvas>
+    <div class="live-status" id="photo-status">Loading the WebAssembly decoder&hellip;</div>
+    <noscript><style>#photo-canvas, #photo-status { display: none; }</style><img src="assets/photo-original.png" alt="The Blue Marble: a photograph of Earth from space showing Africa, Antarctica, and swirling cloud formations"></noscript>
+    <figcaption>assets/photo.prism, decoded live over the network and painted to this canvas with no PNG or JPEG involved after the initial camera capture.</figcaption>
   </figure>
   <table>
     <thead><tr><th>encoding</th><th>bytes</th><th>of raw RGBA</th></tr></thead>
@@ -189,10 +213,11 @@
       <tr><td>.prism (lossless)</td><td class="win">2,533,776</td><td class="win">38.6%</td></tr>
     </tbody>
   </table>
-  <p>PRISM lands at 71.3% of PNG's size and 92.8% of QOI's, on a genuine photograph, not a synthetic where the codec's own assumptions get to pick the test. A pixel-level check across the decoded file confirms zero differences from the source: every one of the roughly 1.6 million pixels came back exactly, alpha channel included. Zoomed 3x into the cloud detail with no smoothing:</p>
+  <p>PRISM lands at 71.3% of PNG's size and 92.8% of QOI's, on a genuine photograph, not a synthetic where the codec's own assumptions get to pick the test. A pixel-level check across the decoded file confirms zero differences from the source: every one of the roughly 1.6 million pixels came back exactly, alpha channel included. Cropped 3x into the cloud detail with no smoothing, drawn straight out of the canvas above:</p>
   <figure>
-    <img src="assets/photo-crop-3x.png" alt="A 3x nearest-neighbor zoom into a cloud formation, showing fine texture and grain preserved exactly">
-    <figcaption>A cropped detail at 3x, pixel-doubled with no smoothing so nothing hides a mismatch. This is what "lossless" is a promise about: not that it looks fine, that it is identical.</figcaption>
+    <canvas id="photo-crop-canvas" width="660" height="660" role="img" aria-label="A 3x zoom into a cloud formation, cropped live from the decoded photograph with no smoothing"></canvas>
+    <noscript><style>#photo-crop-canvas { display: none; }</style><img src="assets/photo-crop-3x.png" alt="A 3x nearest-neighbor zoom into a cloud formation, showing fine texture and grain preserved exactly"></noscript>
+    <figcaption>A live crop at 3x, nearest-neighbor with no smoothing so nothing hides a mismatch. This is what "lossless" is a promise about: not that it looks fine, that it is identical.</figcaption>
   </figure>
   <p><small>For scale: the original JPEG this photo shipped as is 431 KB, far smaller than any lossless encoding here. That is not a fair fight; JPEG is a lossy codec that deliberately discards data the eye will not miss, a different category of promise than PRISM's raster payload makes today. Closing that gap is lossy mode, and it is not in version 1.</small></p>
 
@@ -224,5 +249,104 @@
 </main>
 <footer>PRISM is a personal research project by Brandon Knieriem. MIT licensed.</footer>
 <div class="spectrum"></div>
+<script>
+// Loads crates/prism-wasm's build of prism-core and drives the two LIVE
+// demos above. No wasm-bindgen: the wasm module exports plain functions
+// operating on integers and raw memory, so this is the entire JS side of
+// the boundary. See crates/prism-wasm/src/lib.rs for the Rust side.
+(async () => {
+  let wasmExports;
+  async function loadWasm() {
+    if (wasmExports) return wasmExports;
+    const resp = await fetch('wasm/prism.wasm');
+    if (!resp.ok) throw new Error(`fetching wasm/prism.wasm failed: HTTP ${resp.status}`);
+    const bytes = await resp.arrayBuffer();
+    const { instance } = await WebAssembly.instantiate(bytes, {});
+    wasmExports = instance.exports;
+    return wasmExports;
+  }
+
+  // Fetches a .prism file, loads it into the decoder, and returns a handle
+  // whose render(w, h) decodes/rasterizes fresh pixels on every call.
+  async function loadPrism(url) {
+    const exports = await loadWasm();
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`fetching ${url} failed: HTTP ${resp.status}`);
+    const bytes = new Uint8Array(await resp.arrayBuffer());
+
+    const ptr = exports.prism_alloc(bytes.length);
+    new Uint8Array(exports.memory.buffer, ptr, bytes.length).set(bytes);
+    const kind = exports.prism_load(ptr, bytes.length);
+    exports.prism_free(ptr, bytes.length);
+    if (kind === 0) throw new Error(`${url}: prism_load rejected the file`);
+
+    function render(w, h) {
+      if (exports.prism_render(w, h) !== 0) {
+        throw new Error(`prism_render(${w}, ${h}) failed (raster payloads only upscale in v1)`);
+      }
+      const outPtr = exports.prism_out_ptr();
+      const outLen = exports.prism_out_len();
+      // Copy out of wasm memory now: a later prism_alloc can grow linear
+      // memory and detach any earlier view into it.
+      const pixels = new Uint8ClampedArray(exports.memory.buffer.slice(outPtr, outPtr + outLen));
+      return new ImageData(pixels, w, h);
+    }
+
+    return { kind, width: exports.prism_width(), height: exports.prism_height(), bytesFetched: bytes.length, render };
+  }
+
+  // --- True vectors: live, slider-driven rasterization ---
+  try {
+    const canvas = document.getElementById('vector-canvas');
+    const ctx = canvas.getContext('2d');
+    const slider = document.getElementById('vector-slider');
+    const sizeOut = document.getElementById('vector-size');
+    const status = document.getElementById('vector-status');
+
+    const logo = await loadPrism('assets/logo.prism');
+
+    function draw(size) {
+      canvas.width = size;
+      canvas.height = size;
+      const t0 = performance.now();
+      const imageData = logo.render(size, size);
+      const ms = performance.now() - t0;
+      ctx.putImageData(imageData, 0, 0);
+      sizeOut.textContent = `${size} × ${size}`;
+      status.textContent = `Rasterized ${logo.bytesFetched} bytes at ${size}×${size} in ${ms.toFixed(1)} ms, in your browser, via WebAssembly.`;
+    }
+
+    slider.addEventListener('input', () => draw(parseInt(slider.value, 10)));
+    draw(parseInt(slider.value, 10));
+  } catch (err) {
+    document.getElementById('vector-status').textContent = 'Live demo failed to run: ' + err.message;
+    console.error(err);
+  }
+
+  // --- A real photograph: live raster decode, plus a cropped detail ---
+  try {
+    const canvas = document.getElementById('photo-canvas');
+    const ctx = canvas.getContext('2d');
+    const status = document.getElementById('photo-status');
+
+    const t0 = performance.now();
+    const photo = await loadPrism('assets/photo.prism');
+    const imageData = photo.render(photo.width, photo.height);
+    const ms = performance.now() - t0;
+    canvas.width = photo.width;
+    canvas.height = photo.height;
+    ctx.putImageData(imageData, 0, 0);
+    status.textContent = `Fetched and decoded ${photo.bytesFetched.toLocaleString()} bytes to ${photo.width}×${photo.height} pixels in ${ms.toFixed(0)} ms, in your browser, via WebAssembly.`;
+
+    const crop = document.getElementById('photo-crop-canvas');
+    const cropCtx = crop.getContext('2d');
+    cropCtx.imageSmoothingEnabled = false;
+    cropCtx.drawImage(canvas, 520, 700, 220, 220, 0, 0, 660, 660);
+  } catch (err) {
+    document.getElementById('photo-status').textContent = 'Live demo failed to run: ' + err.message;
+    console.error(err);
+  }
+})();
+</script>
 </body>
 </html>

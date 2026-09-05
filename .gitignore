@@ -1,3 +1,4 @@
 target/
 *.prism
 corpus/
+!docs/assets/*.prism
