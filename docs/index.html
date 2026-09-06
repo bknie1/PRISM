@@ -266,8 +266,11 @@
     return wasmExports;
   }
 
-  // Fetches a .prism file, loads it into the decoder, and returns a handle
-  // whose render(w, h) decodes/rasterizes fresh pixels on every call.
+  // Fetches a .prism file and loads it into the decoder's slab under its
+  // own handle, so multiple files can be open on the same page at once
+  // (a single shared "current file" slot would let the second load on the
+  // page clobber the first's state). Returns an object whose render(w, h)
+  // decodes/rasterizes fresh pixels on every call, keyed to this handle.
   async function loadPrism(url) {
     const exports = await loadWasm();
     const resp = await fetch(url);
@@ -276,12 +279,12 @@
 
     const ptr = exports.prism_alloc(bytes.length);
     new Uint8Array(exports.memory.buffer, ptr, bytes.length).set(bytes);
-    const kind = exports.prism_load(ptr, bytes.length);
+    const handle = exports.prism_load(ptr, bytes.length);
     exports.prism_free(ptr, bytes.length);
-    if (kind === 0) throw new Error(`${url}: prism_load rejected the file`);
+    if (handle === 0) throw new Error(`${url}: prism_load rejected the file`);
 
     function render(w, h) {
-      if (exports.prism_render(w, h) !== 0) {
+      if (exports.prism_render(handle, w, h) !== 0) {
         throw new Error(`prism_render(${w}, ${h}) failed (raster payloads only upscale in v1)`);
       }
       const outPtr = exports.prism_out_ptr();
@@ -292,7 +295,13 @@
       return new ImageData(pixels, w, h);
     }
 
-    return { kind, width: exports.prism_width(), height: exports.prism_height(), bytesFetched: bytes.length, render };
+    return {
+      kind: exports.prism_kind(handle),
+      width: exports.prism_width(handle),
+      height: exports.prism_height(handle),
+      bytesFetched: bytes.length,
+      render,
+    };
   }
 
   // --- True vectors: live, slider-driven rasterization ---
@@ -306,14 +315,19 @@
     const logo = await loadPrism('assets/logo.prism');
 
     function draw(size) {
-      canvas.width = size;
-      canvas.height = size;
-      const t0 = performance.now();
-      const imageData = logo.render(size, size);
-      const ms = performance.now() - t0;
-      ctx.putImageData(imageData, 0, 0);
-      sizeOut.textContent = `${size} × ${size}`;
-      status.textContent = `Rasterized ${logo.bytesFetched} bytes at ${size}×${size} in ${ms.toFixed(1)} ms, in your browser, via WebAssembly.`;
+      try {
+        const t0 = performance.now();
+        const imageData = logo.render(size, size);
+        const ms = performance.now() - t0;
+        canvas.width = size;
+        canvas.height = size;
+        ctx.putImageData(imageData, 0, 0);
+        sizeOut.textContent = `${size} × ${size}`;
+        status.textContent = `Rasterized ${logo.bytesFetched} bytes at ${size}×${size} in ${ms.toFixed(1)} ms, in your browser, via WebAssembly.`;
+      } catch (err) {
+        status.textContent = 'Live demo failed to run: ' + err.message;
+        console.error(err);
+      }
     }
 
     slider.addEventListener('input', () => draw(parseInt(slider.value, 10)));
