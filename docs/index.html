@@ -258,7 +258,10 @@
   let wasmExports;
   async function loadWasm() {
     if (wasmExports) return wasmExports;
-    const resp = await fetch('wasm/prism.wasm');
+    // no-cache (not no-store): revalidate with the server on every load so a
+    // redeployed wasm module is never masked by a stale cached copy, but an
+    // unchanged file still avoids a full re-download via a 304.
+    const resp = await fetch('wasm/prism.wasm', { cache: 'no-cache' });
     if (!resp.ok) throw new Error(`fetching wasm/prism.wasm failed: HTTP ${resp.status}`);
     const bytes = await resp.arrayBuffer();
     const { instance } = await WebAssembly.instantiate(bytes, {});
@@ -273,7 +276,7 @@
   // decodes/rasterizes fresh pixels on every call, keyed to this handle.
   async function loadPrism(url) {
     const exports = await loadWasm();
-    const resp = await fetch(url);
+    const resp = await fetch(url, { cache: 'no-cache' });
     if (!resp.ok) throw new Error(`fetching ${url} failed: HTTP ${resp.status}`);
     const bytes = new Uint8Array(await resp.arrayBuffer());
 
