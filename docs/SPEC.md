@@ -47,13 +47,34 @@ Phase 3 (done): vector payload (docs/vector-payload.md).
 Phase 4 (done): encryption wrapper (ENCR in docs/container.md), feature-gated so prism-core stays dependency-free by default.
 Next candidates: real-photo corpus for honest benchmarks, an svg2prism converter and a TinyVG head-to-head over a real icon set (the vector payload's stated goal is beating both on bytes), encoder/decoder speed work, minification spec, fuzzing the decoders, a wasm viewer.
 
+## Roadmap: animation (planned, not started)
+
+Goal: a modern, memory-safe successor to the Flash use case. Vector animation that plays identically in every conforming player, with an open-source editor. This lives entirely in the extended profile (see below); the baseline stays still-image only. The differentiators against Rive and Lottie are the auditable dependency-free decoder, bit-exact deterministic playback, optional AEAD encryption, and the lowering guarantee (any animation flattens to plain baseline `.prism` frames).
+
+Scope for the first version, chosen to fit the format's constraints:
+
+- In: layers, timeline, keyframes; symbol library with nested instances (each with its own timeline); motion tweens (transform, opacity, color) with easing curves defined in integer fixed point; frame-by-frame animation; shape tweens with a path-structure-match rule; masks and motion guide paths (needs clipping in the extended profile); strokes, lowered to filled outline geometry.
+- Editor-only, no format cost: onion skinning.
+- Out of v1: scripting (ActionScript's attack surface is the cautionary tale; interactivity later as declarative state machines, never a general VM), filters such as blur and glow (float-heavy, breaks bit-exactness), sound and video (each adds a codec attack surface; audio gets its own chunk later), rich text and font parsing, 3D, bone/IK, procedural tools.
+- Decoder hard limits to specify up front: instance count, nesting depth, frame count, and per-frame work budget, rejected like the existing VECT limits.
+
+Planned order:
+
+1. Spec draft for the extended profile animation chunk (working name `ANIM`): scene graph, symbols and instances, keyframe tracks, easing, lowering to baseline, decoder limits. Reviewed before any code.
+2. `svg2prism` converter (already a next candidate), so artists can draw in Inkscape or Figma and bring art in.
+3. WASM player for extended-profile files, built on `prism-wasm`.
+4. Web editor MVP in Rust/WASM on `prism-core`, so the editor preview is the same renderer as the player: pen and shape tools with path editing, timeline, symbols, motion tweens, export. Saves as the extended profile, with one-click flatten to baseline. This is the largest item; expect months of solo effort.
+5. Import/export bridges (SVG, Lottie; SWF import via an existing parser) for interoperability with other software.
+
+Open questions: whether to extend the CPU reference rasterizer (4x4 supersampling, informative-only conformance) or add a GPU path, and what bit-exact conformance should mean for animated vector playback. Both need an answer before the player is called conforming.
+
 ## Extension policy: baseline and profiles
 
 Version 1 as specced here is the baseline profile, and it stays deliberately small; the raw math is the product. Richer capabilities (strokes with joins and caps, text, per-shape transforms, patterns, additional kernels and bit depths) may arrive later as an extended profile (working name .prismx, though profile identity lives in the header, never in the filename). The governing rule: every extended feature must ship with its lowering, a specified conversion back to baseline, so an extended file can always be flattened into a plain .prism that any version 1 decoder reads. Text lowers to paths, strokes lower to filled outline geometry, exotic kernels re-encode under the mandated one. A lowering may declare itself lossy (flattened text is no longer editable text), but it must always exist and must always render the same picture. The container's unknown-chunk skipping and version byte are the wire mechanics; this rule is the policy that keeps them honest. The baseline is the format; profiles are conveniences that are never allowed to hold it hostage.
 
 ## Non-goals
 
-Animation, thumbnail/metadata ecosystems, beating JPEG XL on ratio in version 1, browser adoption.
+Animation in the baseline profile (planned for the extended profile, see the animation roadmap above), thumbnail/metadata ecosystems, beating JPEG XL on ratio in version 1, browser adoption.
 
 ## Resolved decisions
 
